@@ -174,7 +174,7 @@ var CONTENT = {
 /* ---------------- 状态 ---------------- */
 
 var PALETTES = ['lemon', 'peach', 'mint', 'violet'];
-var state = { skin: 'minimal', lang: 'zh', theme: 'lemon', photo: 'id', mask: 'mystery' };
+var state = { skin: 'pop', lang: 'zh', theme: 'lemon', photo: 'id', mask: 'mystery' };
 
 function readStore(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 function writeStore(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
@@ -511,21 +511,25 @@ document.addEventListener('error', function (e) {
 /* ---------------- 渲染：多巴胺风 ---------------- */
 
 
+/* 技能条的估分（自己打分，想改就直接改这五个数） */
+var SKILL_SCORES = [92, 88, 74, 80, 72];
+var BAR_COLORS = ['var(--red)', 'var(--blue)', 'var(--green)', 'var(--pink)', 'var(--red)'];
+
 function renderPop(t) {
   var tabs = ['about', 'exp', 'works', 'skills', 'contact'].map(function (k, i) {
     return '<button class="p-tab' + (i === 0 ? ' on' : '') + '" data-panel="' + k + '">' + t.nav[k] + '</button>';
-  }).join('');
+  }).join('') + '<span class="p-tab-pill" aria-hidden="true"></span>';
 
   var stickers = t.stickers.map(function (s, i) {
-    return '<span class="p-sticker p-s' + (i + 1) + '">' + s + '</span>';
+    return '<span class="p-sticker p-s' + (i + 1) + '" style="--i:' + i + '">' + s + '</span>';
   }).join('');
 
   var marquee = t.marquee.concat(t.marquee).map(function (m) {
     return '<span>' + m + '</span><i>✦</i>';
   }).join('');
 
-  var expCards = t.exp.map(function (e) {
-    return '<div class="p-card p-job">' +
+  var expCards = t.exp.map(function (e, i) {
+    return '<div class="p-card p-job" style="--i:' + i + '">' +
       '<div class="p-job-top"><h3>' + e.title + '</h3>' +
         (e.live ? '<span class="p-tag p-live">' + (state.lang === 'zh' ? '进行中' : 'Now') + '</span>'
                 : '<span class="p-tag">' + e.when + '</span>') + '</div>' +
@@ -535,11 +539,22 @@ function renderPop(t) {
   }).join('');
 
   var workCards = t.works.slice(0, 4).map(function (w, i) {
-    return '<article class="p-card p-work p-w' + (i + 1) + '">' +
+    return '<article class="p-card p-work p-w' + (i + 1) + '" style="--i:' + i + '">' +
       '<h3>' + w.title + '</h3><p>' + w.desc + '</p></article>';
   }).join('');
 
+  var skillRows = t.skills.map(function (s, i) {
+    var score = SKILL_SCORES[i] || 70;
+    return '<div class="p-skill" style="--i:' + i + '">' +
+      '<span class="p-skill-name">' + s[0] + '</span>' +
+      '<span class="p-skill-val">' + s[1] + '</span>' +
+      '<span class="p-bar" style="--w:' + score + '%;--c:' + BAR_COLORS[i % BAR_COLORS.length] + '">' +
+        '<i></i><em>' + score + '</em></span>' +
+    '</div>';
+  }).join('');
+
   return '' +
+  '<div class="p-bg" aria-hidden="true"><i></i><i></i><i></i></div>' +
   '<div class="p-wrap">' +
     '<header class="p-top">' +
       '<div class="p-brand">' +
@@ -561,17 +576,17 @@ function renderPop(t) {
           '</div>' +
           '<div class="p-body p-about-cards">' +
             '<div class="p-grid2">' +
-              '<div class="p-card">' +
+              '<div class="p-card" style="--i:2">' +
                 '<h3>' + t.aboutTitle + '</h3>' +
                 t.about.map(function (p) { return '<p>' + p + '</p>'; }).join('') +
               '</div>' +
-              '<div class="p-card p-accent">' +
+              '<div class="p-card p-accent" style="--i:3">' +
                 '<h3>' + (state.lang === 'zh' ? '信条' : 'Creed') + '</h3>' +
                 '<p class="p-quote">' + t.creed + '</p>' +
                 '<div class="p-chips">' + t.chips.map(function (c) { return '<span class="p-chip">' + c + '</span>'; }).join('') + '</div>' +
               '</div>' +
             '</div>' +
-            '<div class="p-marquee"><div class="p-marquee-track">' + marquee + '</div></div>' +
+            '<div class="p-marquee" style="--i:4"><div class="p-marquee-track">' + marquee + '</div></div>' +
           '</div>' +
         '</div>' +
       '</section>' +
@@ -593,10 +608,8 @@ function renderPop(t) {
       '<section class="p-panel" data-panel="skills">' +
         '<div class="p-inner">' +
           '<div class="p-body">' +
-            '<div class="p-card">' + t.skills.map(function (s) {
-              return '<div class="p-skill"><span class="p-skill-name">' + s[0] + '</span><span class="p-skill-val">' + s[1] + '</span></div>';
-            }).join('') + '</div>' +
-            '<div class="p-card p-school">' +
+            '<div class="p-card" style="--i:0">' + skillRows + '</div>' +
+            '<div class="p-card p-school" style="--i:1">' +
               '<h3>' + t.edu.school + '</h3>' +
               '<p class="p-org">' + t.edu.meta + '</p>' +
               '<p>' + t.edu.points[1] + '</p>' +
@@ -659,9 +672,27 @@ function bindTabs() {
         p.classList.toggle('on', active);
         if (active) p.scrollTop = 0;
       });
+      positionPill();
     });
   });
+  positionPill(true);
 }
+
+/* 墨条跟着当前 tab 滑；first 为真时不走过渡，免得首次加载从最左边滑过来 */
+function positionPill(first) {
+  var on = app.querySelector('.p-tab.on');
+  var pill = app.querySelector('.p-tab-pill');
+  if (!on || !pill) return;
+  if (first) pill.style.transition = 'none';
+  pill.style.width = on.offsetWidth + 'px';
+  pill.style.transform = 'translateX(' + on.offsetLeft + 'px)';
+  if (first) {
+    void pill.offsetWidth;
+    pill.style.transition = '';
+  }
+}
+
+window.addEventListener('resize', function () { positionPill(); });
 
 function bindPhotoSwitch() {
   var buttons = app.querySelectorAll('[data-photo]');
@@ -790,3 +821,124 @@ document.querySelectorAll('[data-set-theme]').forEach(function (b) {
 });
 
 render();
+
+/* ---------------- 按压回弹：真弹簧 ----------------
+   x'' = -k(x-1) - c·x'
+   k=260 / c=12 → 阻尼比 0.37、过冲约 28%、0.67s 回稳。
+   按下用 80ms 三次缓出到 0.94（跟手，不弹），松手才交给弹簧。 */
+
+var SPRING_K = 260;
+var SPRING_C = 12;
+var PRESS_SCALE = 0.94;
+var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var springState = new WeakMap();
+
+function stateOf(el) {
+  var s = springState.get(el);
+  if (!s) { s = { x: 1, v: 0, raf: 0 }; springState.set(el, s); }
+  return s;
+}
+
+function stopSpring(s) {
+  if (s.raf) { cancelAnimationFrame(s.raf); s.raf = 0; }
+}
+
+function pressDown(el) {
+  var s = stateOf(el);
+  stopSpring(s);
+  el.classList.add('is-press');
+  if (REDUCED) { s.x = PRESS_SCALE; el.style.scale = PRESS_SCALE; return; }
+  var from = s.x;
+  var t0 = performance.now();
+  (function step(now) {
+    var p = Math.min(1, (now - t0) / 80);
+    var e = 1 - Math.pow(1 - p, 3);
+    s.x = from + (PRESS_SCALE - from) * e;
+    el.style.scale = s.x.toFixed(4);
+    s.raf = p < 1 ? requestAnimationFrame(step) : 0;
+  })(t0);
+}
+
+function springBack(el) {
+  var s = stateOf(el);
+  stopSpring(s);
+  el.classList.remove('is-press');
+  if (REDUCED) { s.x = 1; s.v = 0; el.style.scale = 1; return; }
+  s.v = 0;
+  var last = performance.now();
+  (function step(now) {
+    var dt = Math.min((now - last) / 1000, 1 / 24);
+    last = now;
+    var n = Math.max(1, Math.ceil(dt * 240));
+    var h = dt / n;
+    for (var i = 0; i < n; i++) {
+      var a = -SPRING_K * (s.x - 1) - SPRING_C * s.v;
+      s.v += a * h;
+      s.x += s.v * h;
+    }
+    el.style.scale = s.x.toFixed(4);
+    if (Math.abs(s.x - 1) < 0.0006 && Math.abs(s.v) < 0.006) {
+      s.x = 1; s.v = 0; el.style.scale = 1; s.raf = 0; return;
+    }
+    s.raf = requestAnimationFrame(step);
+  })(last);
+}
+
+var pressedEl = null;
+
+/* 事件挂 document 上：切皮肤/语言会整块重建 DOM，逐元素绑会丢 */
+document.addEventListener('pointerdown', function (e) {
+  var el = e.target.closest && e.target.closest('button, .p-mail');
+  if (!el || el.disabled) return;
+  pressedEl = el;
+  pressDown(el);
+}, true);
+
+function releasePress() {
+  if (!pressedEl) return;
+  springBack(pressedEl);
+  pressedEl = null;
+}
+
+document.addEventListener('pointerup', releasePress, true);
+document.addEventListener('pointercancel', releasePress, true);
+window.addEventListener('blur', releasePress);
+
+document.addEventListener('keydown', function (e) {
+  var el = document.activeElement;
+  if (e.repeat || !el || el.tagName !== 'BUTTON') return;
+  if (e.key === ' ' || e.key === 'Enter') { pressedEl = el; pressDown(el); }
+});
+
+document.addEventListener('keyup', function (e) {
+  if (e.key === ' ' || e.key === 'Enter') releasePress();
+});
+
+/* ---------------- 点击溅射：7 个小方块 ---------------- */
+
+var SPARK_VARS = ['--red', '--blue', '--green', '--pink', '--bg'];
+
+document.addEventListener('pointerdown', function (e) {
+  if (REDUCED || state.skin !== 'pop' || e.button !== 0) return;
+  var cs = getComputedStyle(document.documentElement);
+  for (var i = 0; i < 7; i++) {
+    var sp = document.createElement('span');
+    sp.className = 'p-spark';
+    sp.style.background = cs.getPropertyValue(SPARK_VARS[i % 5]).trim() || '#ff4d2e';
+    sp.style.left = e.clientX + 'px';
+    sp.style.top = e.clientY + 'px';
+    sp.style.borderRadius = i % 3 === 0 ? '50%' : '2px';
+    document.body.appendChild(sp);
+
+    var ang = (Math.PI * 2 * i) / 7 + Math.random() * 0.4;
+    var dist = 24 + Math.random() * 30;
+    var dx = Math.cos(ang) * dist;
+    var dy = Math.sin(ang) * dist - 8;
+    (function (node) {
+      node.animate([
+        { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 1 },
+        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.35) rotate(' + (Math.random() * 200 - 100) + 'deg)', opacity: 0 }
+      ], { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = function () { node.remove(); };
+    })(sp);
+  }
+}, true);

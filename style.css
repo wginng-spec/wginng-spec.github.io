@@ -587,9 +587,12 @@ html[lang="en"] .m-cover-text {
 
 .p-top-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 
-.p-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+/* tabs 是墨条的定位容器，底部留出墨条的位置 */
+.p-tabs { display: flex; gap: 8px; flex-wrap: wrap; position: relative; padding-bottom: 13px; }
 
 .p-tab {
+  --sh-off: 3px;
+  --sh-color: var(--ink);
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -599,13 +602,31 @@ html[lang="en"] .m-cover-text {
   border-radius: 999px;
   padding: 6px 15px;
   cursor: pointer;
-  box-shadow: 3px 3px 0 var(--ink);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  box-shadow: var(--sh-off) var(--sh-off) 0 var(--sh-color);
+  transition: box-shadow 0.17s cubic-bezier(0.2, 0.8, 0.3, 1),
+              background 0.15s ease, color 0.15s ease;
+  will-change: scale;
 }
 
-.p-tab:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--ink); }
+/* 悬停是「抬起」：阴影拉长；按下才压（.is-press），两者不再打架 */
+.p-tab:hover { --sh-off: 5px; }
 
-.p-tab.on { background: var(--ink); color: var(--bg); box-shadow: 3px 3px 0 var(--red); }
+.p-tab.on { background: var(--ink); color: var(--bg); --sh-color: var(--red); }
+
+.p-tab.is-press { --sh-off: 1px; }
+
+/* 墨条：跟着当前 tab 滑过去，带一点过冲 */
+.p-tab-pill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--red);
+  transition: transform 0.42s cubic-bezier(0.2, 1.12, 0.3, 1.2),
+              width 0.42s cubic-bezier(0.2, 1.12, 0.3, 1.2);
+}
 
 .p-panels { flex: 1; min-height: 0; padding-top: 18px; }
 
@@ -662,7 +683,14 @@ html[lang="en"] .m-cover-text {
   display: block;
   width: 100%;
   height: auto;
-  animation: p-float 5.2s ease-in-out infinite;
+  /* 先把人弹进来（0.62s），再接原来的常驻浮动 */
+  animation: p-pop 0.62s cubic-bezier(0.2, 0.9, 0.25, 1.2) forwards,
+             p-float 5.2s ease-in-out 0.62s infinite;
+}
+
+@keyframes p-pop {
+  from { opacity: 0; transform: scale(0.78) rotate(-5deg); }
+  to   { opacity: 1; transform: none; }
 }
 
 .p-me-img { filter: drop-shadow(0 6px 10px rgba(27, 23, 18, 0.18)); }
@@ -720,9 +748,45 @@ html[lang="en"] .m-cover-text {
   box-shadow: 3px 3px 0 var(--ink);
 }
 
-.p-s1 { transform: rotate(-3deg); background: var(--green); }
-.p-s2 { transform: rotate(2deg); background: var(--pink); }
-.p-s3 { transform: rotate(-1deg); background: #a8d8ff; }
+/* 三张贴纸各走各的节奏：不同周期 + 负延迟，才不像「整齐地呼吸」 */
+.p-s1 { --r: -3deg; --d: 5.4s; transform: rotate(-3deg); background: var(--green); }
+.p-s2 { --r: 2deg; --d: 6.6s; transform: rotate(2deg); background: var(--pink); }
+.p-s3 { --r: -1deg; --d: 7.4s; transform: rotate(-1deg); background: #a8d8ff; }
+
+.p-panel.on .p-sticker {
+  animation: p-in 0.5s cubic-bezier(0.2, 0.86, 0.3, 1.14) both,
+             p-drift var(--d, 6s) ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 65ms), calc(var(--i, 0) * 65ms - 1.6s);
+}
+
+@keyframes p-drift {
+  0%, 100% { transform: rotate(var(--r, 0deg)) translateY(0); }
+  50%      { transform: rotate(calc(var(--r, 0deg) * -0.6)) translateY(-6px); }
+}
+
+/* 名字轻微摆动，±0.9° —— 再多就晕 */
+.p-name {
+  display: inline-block;
+  animation: p-wob 4.6s ease-in-out infinite;
+}
+
+@keyframes p-wob {
+  0%, 100% { transform: rotate(-0.9deg) translateY(0); }
+  50%      { transform: rotate(0.9deg) translateY(-3px); }
+}
+
+/* 进场：卡片、技能行、跑马灯依次落位（只动 opacity + translate，不碰 transform） */
+.p-panel.on .p-card,
+.p-panel.on .p-skill,
+.p-panel.on .p-marquee {
+  animation: p-in 0.5s cubic-bezier(0.2, 0.86, 0.3, 1.14) both;
+  animation-delay: calc(var(--i, 0) * 65ms);
+}
+
+@keyframes p-in {
+  from { opacity: 0; translate: 0 12px; }
+  to   { opacity: 1; translate: 0 0; }
+}
 
 .p-shout { margin: 0 0 18px; font-size: 15px; line-height: 1.95; font-weight: 500; max-width: 76ch; }
 
@@ -838,7 +902,7 @@ html[lang="en"] .m-cover-text {
 .p-skill {
   display: grid;
   grid-template-columns: 96px 1fr;
-  gap: 14px;
+  gap: 3px 14px;
   padding: 9px 0;
   border-bottom: 2px dotted rgba(20, 17, 12, 0.2);
 }
@@ -847,6 +911,53 @@ html[lang="en"] .m-cover-text {
 .p-skill:last-child { border-bottom: none; padding-bottom: 0; }
 .p-skill-name { font-size: 12.5px; font-weight: 900; }
 .p-skill-val { font-size: 12.5px; }
+
+/* 技能条：轨道 + 填充，进入时从 0 长到 --w */
+.p-bar {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 3px;
+}
+
+.p-bar i {
+  position: relative;
+  display: block;
+  height: 11px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: rgba(20, 17, 12, 0.06);
+  overflow: hidden;
+}
+
+.p-bar i::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--w, 0%);
+  border-radius: 999px;
+  background: var(--c, var(--red));
+  animation: p-fill 0.8s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+@keyframes p-fill {
+  from { width: 0; }
+  to   { width: var(--w, 0%); }
+}
+
+.p-bar em {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 900;
+  text-align: right;
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
+}
 
 .p-school { margin-top: 16px; }
 .p-school h3 { font-size: 16px !important; }
@@ -920,4 +1031,74 @@ html[lang="en"] .m-cover-text {
   .sw { width: 14px; height: 14px; }
   .p-wrap { padding-bottom: 104px; }
   .m-page { padding-bottom: 118px; }
+}
+
+/* ==========================================================
+   动效层：背景色团 / 点击溅射 / 降级
+   ========================================================== */
+
+/* 切换配色不要硬切 */
+:root[data-skin="pop"] body { transition: background-color 0.45s ease; }
+
+/* 背景三个色团缓慢漂移：只动 transform，不用 filter blur（省 GPU） */
+.p-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.p-bg i {
+  position: absolute;
+  display: block;
+  width: 48vmax;
+  height: 48vmax;
+  border-radius: 50%;
+  opacity: 0.4;
+  background: radial-gradient(circle at 50% 50%, var(--c) 0%, transparent 62%);
+  will-change: transform;
+}
+
+.p-bg i:nth-child(1) { --c: var(--red);  left: -16vmax; top: -18vmax;   animation: p-blob-a 30s ease-in-out infinite alternate; }
+.p-bg i:nth-child(2) { --c: var(--blue); right: -20vmax; top: -10vmax;  animation: p-blob-b 34s ease-in-out infinite alternate; }
+.p-bg i:nth-child(3) { --c: var(--pink); left: 18vmax; bottom: -26vmax; animation: p-blob-c 26s ease-in-out infinite alternate; }
+
+@keyframes p-blob-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(8vmax, 6vmax, 0) scale(1.12); }
+}
+@keyframes p-blob-b {
+  from { transform: translate3d(0, 0, 0) scale(1.06); }
+  to   { transform: translate3d(-7vmax, 9vmax, 0) scale(0.94); }
+}
+@keyframes p-blob-c {
+  from { transform: translate3d(0, 0, 0) scale(0.98); }
+  to   { transform: translate3d(6vmax, -8vmax, 0) scale(1.1); }
+}
+
+/* 内容压在色团上面 */
+.p-wrap { position: relative; z-index: 1; }
+
+/* 点击溅出的小方块 */
+.p-spark {
+  position: fixed;
+  z-index: 998;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p-bg { display: none; }
+  .p-name,
+  .p-panel.on .p-sticker,
+  .p-panel.on .p-card,
+  .p-panel.on .p-skill,
+  .p-panel.on .p-marquee,
+  .p-bar i::after { animation: none; }
+  .p-me-svg, .p-me-img { animation: none; }
+  .p-tab-pill { transition: none; }
 }
