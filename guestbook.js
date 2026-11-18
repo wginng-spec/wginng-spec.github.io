@@ -284,8 +284,7 @@
           '<p class="gb-err" id="gbErr2"></p>' +
           '<button class="gb-submit" type="submit">以访客身份进去</button>' +
         '</form>' +
-        '<p class="gb-fine" id="gbFine">密码加盐哈希后只存在这台设备的浏览器里，不会上传到任何地方。' +
-          '<button type="button" class="gb-reset" id="gbReset">忘记密码</button></p>' +
+        '<p class="gb-fine" id="gbFine">密码加盐哈希后只存在这台设备的浏览器里，不会上传到任何地方。</p>' +
       '</div>' +
     '</div>';
 
@@ -409,20 +408,8 @@
     gate.querySelector('#gbPassLabel').textContent = has ? '密码' : '设置一个密码';
     gate.querySelector('#gbGo').textContent = has ? '开门' : '设置密码并进入';
     gate.querySelector('#gbFine').innerHTML = has
-      ? '密码加盐哈希后只存在这台设备的浏览器里，不会上传到任何地方。<button type="button" class="gb-reset" id="gbReset">忘记密码</button>'
+      ? '密码加盐哈希后只存在这台设备的浏览器里，不会上传到任何地方。'
       : '第一次进来，先设一个只有你知道的密码。它只存在这台设备上。';
-    var r = gate.querySelector('#gbReset');
-    if (r) r.addEventListener('click', resetCreds);
-  }
-
-  function resetCreds() {
-    if (!window.confirm('清空本机的站长密码？之后可以重新设置一个。留言不会丢。')) return;
-    localStorage.removeItem(K.admin);
-    localStorage.removeItem(K.sess);
-    session = null;
-    syncGateCopy();
-    passEl.value = '';
-    errEl.textContent = '已清空，重新设一个密码即可。';
   }
 
   function switchRole(role) {
