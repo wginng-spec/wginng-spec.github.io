@@ -82,8 +82,10 @@
 }
 
 .gb-cover:hover .gb-frame-b,
-.gb-cover.touch .gb-frame-b,
-
+.gb-cover.touch .gb-frame-b {
+  opacity: 1;
+  animation: none;   /* 防止继承 gb-float 的 gb-drift，否则第二帧会飘/转/闪 */
+}
 
 .gb-float {
   position: absolute;
