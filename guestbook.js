@@ -537,12 +537,8 @@
   document.addEventListener('pointermove', onMove, { passive: true });
 
   function loopCover(t) {
-    idleFrames++;
-    if (idleFrames > 90) {
-      targetTilt = TILT_BASE + Math.sin(t / 2600) * 0.8;
-      targetYaw = Math.sin(t / 3200) * 2.2;
-      targetY = Math.sin(t / 2100) * 1.2;
-    }
+    idleFrames++;   /* 只做统计（鼠标静止了多少帧），不再驱动任何自漂移 */
+    /* 不再做「静止自漂移」：鼠标不动时画面完全静止，避免被看成抖动 */
     curTilt += (targetTilt - curTilt) * 0.09;
     curYaw += (targetYaw - curYaw) * 0.07;
     curY += (targetY - curY) * 0.07;
@@ -564,6 +560,7 @@
         coverEl.classList.remove('touch');
       });
     });
+
   }
 
   /* ---------------- 留言板 ---------------- */
