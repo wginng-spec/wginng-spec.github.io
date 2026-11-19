@@ -26,6 +26,16 @@
   var MAX_TOTAL = 200;
   var SESSION_DAYS = 30;
 
+  /* 留言板只能在应用的发布域名上连云端：服务端会精确匹配 Origin，
+     别的域名（比如 GitHub Pages 镜像站）请求会被 CORS 挡掉。
+     所以镜像站不自己渲染留言板，点「留言板」直接跳回主站，两边永远是同一份数据。 */
+  var MAIN_SITE_URL = 'https://wbapp-x482mkiz1oluemawbxjjzx.app.workbuddy.host/?sharecode=NKZUJBPFPY';
+  var IS_MIRROR = location.hostname.indexOf('workbuddy.host') < 0 &&
+    location.hostname !== 'localhost' &&
+    location.hostname !== '127.0.0.1' &&
+    location.protocol !== 'file:';
+
+
   /* ---------------- 云服务（WorkBuddy 云托管） ---------------- */
 
   var CLOUD_CFG = {
@@ -342,9 +352,20 @@
     var group = el('div', 'ctrl-group');
     group.innerHTML = '<button class="ctrl-btn" id="gbOpen"></button>';
     ctrl.appendChild(group);
-    document.getElementById('gbOpen').addEventListener('click', function () {
+    var btn = document.getElementById('gbOpen');
+    if (IS_MIRROR) btn.title = '留言板在主站，点一下过去';
+    btn.addEventListener('click', function () {
+      if (IS_MIRROR) { goMainSite(); return; }
       openDrawer('board');
     });
+  }
+
+  /* 镜像站跳主站，把访客昵称一起带过去，免得他再输一遍名字 */
+  function goMainSite() {
+    var nick = (session && session.nick) || Store.get(K.nick, '') || '';
+    var url = MAIN_SITE_URL;
+    if (nick) url += '#guest=' + encodeURIComponent(nick);
+    location.href = url;
   }
 
   /* 红点 = 未读数（打开抽屉就算读完，关着才累计） */
@@ -844,6 +865,18 @@
   }
 
   function boot() {
+    /* 从镜像站跳过来会带 #guest=昵称，直接以访客身份进门 */
+    var hm = /(?:^|[#&])guest=([^&]+)/.exec(location.hash || '');
+    if (hm && !session) {
+      var fromMirror = '';
+      try { fromMirror = decodeURIComponent(hm[1]).slice(0, 16); } catch (e) { fromMirror = ''; }
+      if (fromMirror) {
+        Store.set(K.nick, fromMirror);
+        saveSession({ role: 'guest', nick: fromMirror });
+        try { history.replaceState(null, '', location.pathname + location.search); } catch (e2) {}
+      }
+    }
+
     mountCtrl();
 
     if (applyOverrides() && window.render) window.render();
