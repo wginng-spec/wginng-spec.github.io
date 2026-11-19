@@ -49,6 +49,8 @@
 
   function initCloud() {
     if (cloudState !== 'idle') return;
+    /* 镜像站（github.io 等）跨域必被服务端拦，索性不连，省掉一串 403 */
+    if (IS_MIRROR) { cloudState = 'off'; cloudErr = '镜像站不连云端'; return; }
     var WB = window.WorkBuddyCloud;
     if (!WB || typeof WB.createWorkBuddyCloud !== 'function') return; // 还没到，等 whenCloud 再试
     try {
@@ -867,14 +869,16 @@
   function boot() {
     /* 从镜像站跳过来会带 #guest=昵称，直接以访客身份进门 */
     var hm = /(?:^|[#&])guest=([^&]+)/.exec(location.hash || '');
-    if (hm && !session) {
+    if (hm) {
       var fromMirror = '';
       try { fromMirror = decodeURIComponent(hm[1]).slice(0, 16); } catch (e) { fromMirror = ''; }
-      if (fromMirror) {
+      /* 已有访客会话也更新昵称；站长会话不降级 */
+      if (fromMirror && !isAdmin()) {
         Store.set(K.nick, fromMirror);
         saveSession({ role: 'guest', nick: fromMirror });
-        try { history.replaceState(null, '', location.pathname + location.search); } catch (e2) {}
       }
+      /* 不管有没有落名字，hash 都要清掉，免得地址栏一直挂着 */
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e2) {}
     }
 
     mountCtrl();
